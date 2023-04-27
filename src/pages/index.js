@@ -1,6 +1,8 @@
-import React, { useRef } from 'react';
-
+import React, { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
+// VwTZ4AGTxme9snANex9tep3NwvVMGfYd
 import { useEventListener, useHuddle01 } from '@huddle01/react';
+import { useRecorder } from '@huddle01/react/app-utils';
 import { Audio, Video } from '@huddle01/react/components';
 /* Uncomment to see the Xstate Inspector */
 // import { Inspect } from '@huddle01/react/components';
@@ -12,14 +14,17 @@ import {
   usePeers,
   useRoom,
   useVideo,
+  useRecording
 } from '@huddle01/react/hooks';
 
 import Button from '../components/Button';
 
-export default function Home() {
+export default function Home () {
   const videoRef = useRef(null);
 
   const { state, send } = useMeetingMachine();
+  const { startRecording, stopRecording, data, isStarting, inProgress, error } = useRecording();
+  const [roomId, setRoomId] = useState('');
   // Event Listner
   useEventListener('lobby:cam-on', () => {
     if (state.context.camStream && videoRef.current)
@@ -45,6 +50,18 @@ export default function Home() {
   const { joinRoom, leaveRoom } = useRoom();
 
   const { peers } = usePeers();
+
+  // useRecorder(roomId, 'KL1r3E1yHfcrRbXsT4mcE-3mK60Yc3YR');
+  useEffect(() => {
+    if (!isInitialized) {
+      initialize(process.env.NEXT_PUBLIC_PROJECT_ID)
+    }
+  }, [isInitialized]);
+
+  const handleCreateRoom = async () => {
+    const { roomId } = await createRoom();
+    setRoomId(roomId);
+  }
 
   return (
     <div className="grid grid-cols-2">
@@ -79,25 +96,27 @@ export default function Home() {
           {JSON.stringify(state.context.consumers)}
         </div>
 
-        <h2 className="text-3xl text-blue-500 font-extrabold">Idle</h2>
-        <Button
-          disabled={!state.matches('Idle')}
-          onClick={() => initialize('YOUR_PROJECT_ID')}
-        >
-          INIT
-        </Button>
-
         <br />
         <br />
-        <h2 className="text-3xl text-red-500 font-extrabold">Initialized</h2>
+        <Button onClick={() => handleCreateRoom()}>Create Meet</Button>
+        <br />
+        <input id="roomId" type="text" placeholder='RoomId' value={roomId}
+          onChange={(e) => setRoomId(e.target.value)} />
         <Button
           disabled={!joinLobby.isCallable}
           onClick={() => {
-            joinLobby('YOUR_ROOM_ID');
+            joinLobby(roomId);
+          }}>Join Meet</Button>
+        {/* <h2 className="text-3xl text-red-500 font-extrabold">Initialized</h2>
+
+        <Button
+          disabled={!joinLobby.isCallable}
+          onClick={() => {
+            joinLobby(roomId);
           }}
         >
           JOIN_LOBBY
-        </Button>
+        </Button> */}
         <br />
         <br />
         <h2 className="text-3xl text-yellow-500 font-extrabold">Lobby</h2>
@@ -106,14 +125,14 @@ export default function Home() {
             disabled={!fetchVideoStream.isCallable}
             onClick={fetchVideoStream}
           >
-            FETCH_VIDEO_STREAM
+            Start Camera
           </Button>
 
           <Button
             disabled={!fetchAudioStream.isCallable}
             onClick={fetchAudioStream}
           >
-            FETCH_AUDIO_STREAM
+            Unmute
           </Button>
 
           <Button disabled={!joinRoom.isCallable} onClick={joinRoom}>
@@ -131,13 +150,13 @@ export default function Home() {
             disabled={!stopVideoStream.isCallable}
             onClick={stopVideoStream}
           >
-            STOP_VIDEO_STREAM
+            Stop Camera
           </Button>
           <Button
             disabled={!stopAudioStream.isCallable}
             onClick={stopAudioStream}
           >
-            STOP_AUDIO_STREAM
+            Mute
           </Button>
         </div>
         <br />
@@ -175,6 +194,33 @@ export default function Home() {
             LEAVE_ROOM
           </Button>
         </div>
+        <div>
+          <h2 className="text-3xl text-green-600 font-extrabold">Recording</h2>
+          <div className="flex gap-4 flex-wrap">
+            <Button
+              disabled={!startRecording.isCallable}
+              onClick={() => {
+                startRecording(`http://localhost:3000/`)
+              }}
+            >
+              START_RECORDING
+            </Button>
+
+            <Button
+              disabled={!stopRecording.isCallable}
+              onClick={() => {
+                stopRecording()
+                console.log('stop recording', data)
+              }}
+            >
+              STOP_RECORDING
+            </Button>
+            <div>isStarting: {isStarting.toString()}</div>
+            <div>inProgress: {inProgress.toString()}</div>
+            <div>error: {error}</div>
+          </div>
+
+        </div>
 
         {/* Uncomment to see the Xstate Inspector */}
         {/* <Inspect /> */}
@@ -202,4 +248,42 @@ export default function Home() {
       </div>
     </div>
   );
+}
+
+export async function createRoom () {
+  // Fetch data from external API
+  const { data: { data } } = await axios.post(
+    'https://iriko.testing.huddle01.com/api/v1/create-room',
+    {
+      title: 'Huddle01-SDK-Test',
+      hostWallets: ['0x7935468Da117590bA75d8EfD180cC5594aeC1582'],
+      // tokenType: "ERC721",
+      // chain: "ETHEREUM",
+      // contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'VwTZ4AGTxme9snANex9tep3NwvVMGfYd',
+      },
+    }
+  );
+
+  const { data: data1 } = await axios.post(`https://iriko.testing.huddle01.com/api/v1/join-room-token`,
+    {
+      roomId: data.roomId,
+      userType: "host"
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'VwTZ4AGTxme9snANex9tep3NwvVMGfYd',
+      },
+    });
+  console.log("Data from meeting details", data1)
+  console.log(data)
+  return {
+    roomId: data.roomId,
+  };
+
 }
