@@ -264,7 +264,7 @@ export async function createRoom () {
     {
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': 'VwTZ4AGTxme9snANex9tep3NwvVMGfYd',
+        'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
       },
     }
   );
@@ -277,7 +277,7 @@ export async function createRoom () {
     {
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': 'VwTZ4AGTxme9snANex9tep3NwvVMGfYd',
+        'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
       },
     });
   console.log("Data from meeting details", data1)
