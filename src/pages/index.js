@@ -200,7 +200,7 @@ export default function Home () {
             <Button
               disabled={!startRecording.isCallable}
               onClick={() => {
-                startRecording(`https://${window.location.href}/rec/${roomId}`)
+                startRecording(`${window.location.href}rec/${roomId}`)
               }}
             >
               START_RECORDING
