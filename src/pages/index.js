@@ -200,7 +200,7 @@ export default function Home () {
             <Button
               disabled={!startRecording.isCallable}
               onClick={() => {
-                startRecording(`${window.location.href}rec/${roomId}`)
+                startRecording(`https://test-huddle.vercel.app/rec/${roomId}`)
               }}
             >
               START_RECORDING
