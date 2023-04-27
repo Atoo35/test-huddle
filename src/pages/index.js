@@ -218,6 +218,7 @@ export default function Home () {
             <div>isStarting: {isStarting.toString()}</div>
             <div>inProgress: {inProgress.toString()}</div>
             <div>error: {error}</div>
+            <div>data: {JSON.stringify(data)}</div>
           </div>
 
         </div>
