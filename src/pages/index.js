@@ -25,6 +25,7 @@ export default function Home () {
   const { state, send } = useMeetingMachine();
   const { startRecording, stopRecording, data, isStarting, inProgress, error } = useRecording();
   const [roomId, setRoomId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
   // Event Listner
   useEventListener('lobby:cam-on', () => {
     if (state.context.camStream && videoRef.current)
@@ -59,9 +60,23 @@ export default function Home () {
   }, [isInitialized]);
 
   const handleCreateRoom = async () => {
-    const { roomId } = await createRoom();
+    const { roomId, accessToken } = await createRoom();
     setRoomId(roomId);
+    setAccessToken(accessToken);
   }
+
+  const handleJoinRoom = () => {
+    joinLobby(roomId);
+  }
+
+  useEventListener("lobby:joined", () => {
+    fetchVideoStream();
+  }, [fetchVideoStream.isCallable]);
+
+  useEventListener("lobby:cam-on", () => {
+    fetchAudioStream();
+  }, [fetchAudioStream.isCallable]);
+
 
   return (
     <div className="grid grid-cols-2">
@@ -104,9 +119,7 @@ export default function Home () {
           onChange={(e) => setRoomId(e.target.value)} />
         <Button
           disabled={!joinLobby.isCallable}
-          onClick={() => {
-            joinLobby(roomId);
-          }}>Join Meet</Button>
+          onClick={handleJoinRoom}>Join Meet</Button>
         {/* <h2 className="text-3xl text-red-500 font-extrabold">Initialized</h2>
 
         <Button
@@ -121,7 +134,7 @@ export default function Home () {
         <br />
         <h2 className="text-3xl text-yellow-500 font-extrabold">Lobby</h2>
         <div className="flex gap-4 flex-wrap">
-          <Button
+          {/* <Button
             disabled={!fetchVideoStream.isCallable}
             onClick={fetchVideoStream}
           >
@@ -133,7 +146,7 @@ export default function Home () {
             onClick={fetchAudioStream}
           >
             Unmute
-          </Button>
+          </Button> */}
 
           <Button disabled={!joinRoom.isCallable} onClick={joinRoom}>
             JOIN_ROOM
@@ -146,7 +159,7 @@ export default function Home () {
             LEAVE_LOBBY
           </Button>
 
-          <Button
+          {/* <Button
             disabled={!stopVideoStream.isCallable}
             onClick={stopVideoStream}
           >
@@ -157,7 +170,7 @@ export default function Home () {
             onClick={stopAudioStream}
           >
             Mute
-          </Button>
+          </Button> */}
         </div>
         <br />
         <h2 className="text-3xl text-green-600 font-extrabold">Room</h2>
@@ -166,28 +179,28 @@ export default function Home () {
             disabled={!produceAudio.isCallable}
             onClick={() => produceAudio(micStream)}
           >
-            PRODUCE_MIC
+            Unmute
           </Button>
 
           <Button
             disabled={!produceVideo.isCallable}
             onClick={() => produceVideo(camStream)}
           >
-            PRODUCE_CAM
+            Start video
           </Button>
 
           <Button
             disabled={!stopProducingAudio.isCallable}
             onClick={() => stopProducingAudio()}
           >
-            STOP_PRODUCING_MIC
+            Mute
           </Button>
 
           <Button
             disabled={!stopProducingVideo.isCallable}
             onClick={() => stopProducingVideo()}
           >
-            STOP_PRODUCING_CAM
+            Stop video
           </Button>
 
           <Button disabled={!leaveRoom.isCallable} onClick={leaveRoom}>
@@ -285,6 +298,7 @@ export async function createRoom () {
   console.log(data)
   return {
     roomId: data.roomId,
+    accessToken: data1.token
   };
 
 }
