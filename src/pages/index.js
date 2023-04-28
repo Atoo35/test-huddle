@@ -66,7 +66,10 @@ export default function Home () {
   }
 
   const handleJoinRoom = () => {
-    joinLobby(roomId);
+    if (roomId != '' && accessToken != '')
+      joinLobby(roomId, accessToken);
+    else
+      alert('Please enter room id and access token');
   }
 
   useEventListener("lobby:joined", () => {
