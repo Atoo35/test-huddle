@@ -122,6 +122,8 @@ export default function Home () {
       } else {
         alert("You don't have access to this file");
       }
+    } else {
+      alert("Please connect your wallet");
     }
   };
 
