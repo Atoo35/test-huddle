@@ -19,7 +19,7 @@ import {
 
 import Button from '../components/Button';
 import { ConnectKitButton } from "connectkit";
-import { SBT_CONTRACT_ABI, SBT_CONTRACT_ADDRESS } from '@/constants';
+import { FILE_ACCESS_CONTRACT_ABI, FILE_ACCESS_CONTRACT_ADDRESS, SBT_CONTRACT_ABI, SBT_CONTRACT_ADDRESS } from '@/constants';
 
 export default function Home () {
   const { address } = useAccount();
@@ -58,11 +58,19 @@ export default function Home () {
       setAccessToken(token.accessToken);
     },
   });
+
   const sbt = useContract({
     address: SBT_CONTRACT_ADDRESS,
     abi: SBT_CONTRACT_ABI,
     signerOrProvider: signer || provider,
   });
+
+  const fileAccess = useContract({
+    address: FILE_ACCESS_CONTRACT_ADDRESS,
+    abi: FILE_ACCESS_CONTRACT_ABI,
+    signerOrProvider: signer || provider,
+  });
+
   useEffect(() => {
     if (!isInitialized) {
       initialize(process.env.NEXT_PUBLIC_PROJECT_ID)
@@ -102,13 +110,18 @@ export default function Home () {
     setCid(data.Hash);
   };
 
-  const decryptFile = async (cid) => {
-    // const response = await fetch(`/api/decrypt?cid=${cid}`);
-    // console.log("response", response.body);
-    // setCid(cid);
+  const decryptFile = async (fileId, cid) => {
     if (address) {
-      const test = await sbt?.balanceOf(address);
-      console.log("test", test);
+      const test2 = await fileAccess?.hasAccess(fileId, '0x7935468Da117590bA75d8EfD180cC5594aeC1582', address);
+      const fileList = await fileAccess?.getAllFilesByOwnerAddress('0x7935468Da117590bA75d8EfD180cC5594aeC1582');
+      console.log("fileList", fileList)
+      if (test2) {
+        const response = await axios.get(`/api/decrypt?cid=${cid}`);
+        // console.log("response", response.data);
+        setCid(cid);
+      } else {
+        alert("You don't have access to this file");
+      }
     }
   };
 
@@ -162,7 +175,7 @@ export default function Home () {
 
         <br />
         <br />
-        <Button onClick={() => { decryptFile("QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj") }}>Decrypt</Button>
+        <Button onClick={() => { decryptFile(0, "QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj") }}>Decrypt</Button>
         <Button onClick={uploadFile}>Upload File</Button><br />
         <Button onClick={() => handleCreateRoom()}>Create Meet</Button>
         <br />
