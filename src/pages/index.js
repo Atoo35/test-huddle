@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 // VwTZ4AGTxme9snANex9tep3NwvVMGfYd
 import { useEventListener, useHuddle01 } from '@huddle01/react';
-import { useRecorder } from '@huddle01/react/app-utils';
 import { Audio, Video } from '@huddle01/react/components';
-/* Uncomment to see the Xstate Inspector */
-// import { Inspect } from '@huddle01/react/components';
+import Image from 'next/image'
+import { useAccount, useSignMessage, useContract, useSigner, useProvider } from "wagmi";
+import { getAccessToken, getMessage } from "@huddle01/auth";
 
 import {
   useAudio,
@@ -18,33 +18,32 @@ import {
 } from '@huddle01/react/hooks';
 
 import Button from '../components/Button';
+import { ConnectKitButton } from "connectkit";
+import { SBT_CONTRACT_ABI, SBT_CONTRACT_ADDRESS } from '@/constants';
 
 export default function Home () {
+  const { address } = useAccount();
   const videoRef = useRef(null);
-
+  const provider = useProvider();
+  const { data: signer } = useSigner();
   const { state, send } = useMeetingMachine();
   const { startRecording, stopRecording, data, isStarting, inProgress, error } = useRecording();
   const [roomId, setRoomId] = useState('');
   const [accessToken, setAccessToken] = useState('');
+  const [cid, setCid] = useState();
   // Event Listner
-  useEventListener('lobby:cam-on', () => {
-    if (state.context.camStream && videoRef.current)
-      videoRef.current.srcObject = state.context.camStream;
-  });
 
   const { initialize, isInitialized } = useHuddle01();
   const { joinLobby } = useLobby();
   const {
     fetchAudioStream,
     produceAudio,
-    stopAudioStream,
     stopProducingAudio,
     stream: micStream,
   } = useAudio();
   const {
     fetchVideoStream,
     produceVideo,
-    stopVideoStream,
     stopProducingVideo,
     stream: camStream,
   } = useVideo();
@@ -52,7 +51,18 @@ export default function Home () {
 
   const { peers } = usePeers();
 
-  // useRecorder(roomId, 'KL1r3E1yHfcrRbXsT4mcE-3mK60Yc3YR');
+  const { signMessage } = useSignMessage({
+    onSuccess: async (data) => {
+      const token = await getAccessToken(data, address);
+      console.log("token", token);
+      setAccessToken(token.accessToken);
+    },
+  });
+  const sbt = useContract({
+    address: SBT_CONTRACT_ADDRESS,
+    abi: SBT_CONTRACT_ABI,
+    signerOrProvider: signer || provider,
+  });
   useEffect(() => {
     if (!isInitialized) {
       initialize(process.env.NEXT_PUBLIC_PROJECT_ID)
@@ -60,21 +70,23 @@ export default function Home () {
   }, [isInitialized]);
 
   const handleCreateRoom = async () => {
-    const { roomId, accessToken } = await createRoom();
+    const { roomId } = await createRoom();
     setRoomId(roomId);
-    setAccessToken(accessToken);
   }
 
   const handleJoinRoom = () => {
-    console.log("roomId", roomId)
-    console.log("accessToken", accessToken)
     if (roomId != '' && accessToken != '')
       joinLobby(roomId, accessToken);
     else
-      alert('Please enter room id and access token');
+      alert('Please enter room id and sign the message');
 
     console.log("peers", peers)
   }
+
+  useEventListener('lobby:cam-on', () => {
+    if (state.context.camStream && videoRef.current)
+      videoRef.current.srcObject = state.context.camStream;
+  });
 
   useEventListener("lobby:joined", () => {
     fetchVideoStream();
@@ -84,6 +96,21 @@ export default function Home () {
     fetchAudioStream();
   }, [fetchAudioStream.isCallable]);
 
+  const uploadFile = async () => {
+    const response = await fetch('/api/upload');
+    const { response: { data } } = await response.json();
+    setCid(data.Hash);
+  };
+
+  const decryptFile = async (cid) => {
+    // const response = await fetch(`/api/decrypt?cid=${cid}`);
+    // console.log("response", response.body);
+    // setCid(cid);
+    if (address) {
+      const test = await sbt?.balanceOf(address);
+      console.log("test", test);
+    }
+  };
 
   return (
     <div className="grid grid-cols-2">
@@ -94,7 +121,22 @@ export default function Home () {
             Huddle01 SDK!
           </a>
         </h1>
-
+        <ConnectKitButton />
+        {(address && !accessToken) && (
+          <div>
+            <Button
+              onClick={async () => {
+                const msg = await getMessage(address);
+                signMessage({ message: msg.message });
+              }}>
+              Sign Message
+            </Button>
+          </div>
+        )}
+        {/* QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj */}
+        {/* <Video src='/api/decrypt?cid=QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj' width={300} height={300} controls /> */}
+        {cid && <Video src={`/api/decrypt?cid=${cid}`} width={300} height={300} controls />}
+        {/* {cid && <Image src={`/api/decrypt?cid=${cid}`} width={300} height={300} />} */}
         <h2 className="text-2xl">Room State</h2>
         <h3>{JSON.stringify(state.value)}</h3>
 
@@ -120,6 +162,8 @@ export default function Home () {
 
         <br />
         <br />
+        <Button onClick={() => { decryptFile("QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj") }}>Decrypt</Button>
+        <Button onClick={uploadFile}>Upload File</Button><br />
         <Button onClick={() => handleCreateRoom()}>Create Meet</Button>
         <br />
         <input id="roomId" type="text" placeholder='RoomId' value={roomId}
@@ -278,9 +322,9 @@ export async function createRoom () {
     {
       title: 'Huddle01-SDK-Test',
       hostWallets: ['0x7935468Da117590bA75d8EfD180cC5594aeC1582'],
-      // tokenType: "ERC721",
-      // chain: "ETHEREUM",
-      // contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
+      tokenType: "ERC721",
+      chain: "ETHEREUM",
+      contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
     },
     {
       headers: {
@@ -290,22 +334,22 @@ export async function createRoom () {
     }
   );
 
-  const { data: data1 } = await axios.post(`https://iriko.testing.huddle01.com/api/v1/join-room-token`,
-    {
-      roomId: data.roomId,
-      userType: "host"
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
-      },
-    });
-  console.log("Data from meeting details", data1)
-  console.log(data)
+  // const { data: data1 } = await axios.post(`https://iriko.testing.huddle01.com/api/v1/join-room-token`,
+  //   {
+  //     roomId: data.roomId,
+  //     userType: "host"
+  //   },
+  //   {
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'x-api-key': process.env.NEXT_PUBLIC_API_KEY,
+  //     },
+  //   });
+  // console.log("Data from meeting details", data1)
+  // console.log(data)
   return {
     roomId: data.roomId,
-    accessToken: data1.token
+    // accessToken: data1.token
   };
 
 }
