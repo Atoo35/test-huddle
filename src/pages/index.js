@@ -337,9 +337,9 @@ export async function createRoom () {
     {
       title: 'Huddle01-SDK-Test',
       hostWallets: ['0x7935468Da117590bA75d8EfD180cC5594aeC1582'],
-      tokenType: "ERC721",
-      chain: "ETHEREUM",
-      contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
+      // tokenType: "ERC721",
+      // chain: "ETHEREUM",
+      // contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
     },
     {
       headers: {
