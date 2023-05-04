@@ -20,7 +20,7 @@ const signAuthMessage = async () => {
 }
 
 const deployEncrypted = async (file, hostWallet) => {
-
+    let filePath;
     try {
         //for actually downloading the file
         const resp = await axios.get(file, {
@@ -29,7 +29,7 @@ const deployEncrypted = async (file, hostWallet) => {
         })
         await fs.createWriteStream(path.resolve("./src/downloads/recording.mp4").toString()).write(Buffer.from(resp.data));
 
-        const filePath = path.resolve("./src/downloads/recording.mp4").toString();
+        filePath = path.resolve("./src/downloads/recording.mp4").toString();
         const apiKey = process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY;
         const publicKey = signer.address;
         const signedMessage = await signAuthMessage();

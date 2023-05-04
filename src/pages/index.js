@@ -120,7 +120,7 @@ export default function Home () {
   }, [isInitialized]);
 
   const handleCreateRoom = async () => {
-    const { roomId } = await createRoom();
+    const { roomId } = await createRoom(address);
     setRoomId(roomId);
   };
 
@@ -170,7 +170,7 @@ export default function Home () {
         address
       );
       if (test2) {
-        setCid(fileList[0].hash);
+        setCid(newFile.hash);
       } else {
         alert("You don't have access to this file");
       }
@@ -416,7 +416,7 @@ export default function Home () {
   );
 }
 
-export async function createRoom () {
+export async function createRoom (address) {
   // Fetch data from external API
   const {
     data: { data },
@@ -424,10 +424,10 @@ export async function createRoom () {
     "https://iriko.testing.huddle01.com/api/v1/create-room",
     {
       title: "Huddle01-SDK-Test",
-      hostWallets: ["0x7935468Da117590bA75d8EfD180cC5594aeC1582"],
-      tokenType: "ERC721",
-      chain: "FILECOIN",
-      contractAddress: [SBT_CONTRACT_ADDRESS],
+      hostWallets: [address],
+      // tokenType: "ERC721",
+      // chain: "FILECOIN",
+      // contractAddress: [SBT_CONTRACT_ADDRESS],
     },
     {
       headers: {
