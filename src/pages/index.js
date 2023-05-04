@@ -153,10 +153,10 @@ export default function Home () {
   );
 
   const decryptFile = async () => {
-    const ownerAddress = '0x7904521174Bb111e4Fb416590F85116cddC2EA4E'
+    // const ownerAddress = '0x7904521174Bb111e4Fb416590F85116cddC2EA4E'
     if (address) {
       const fileList = await fileAccess?.getAllFilesByOwnerAddress(
-        ownerAddress
+        address
       );
       const newFile = fileList.at(-1);
       console.log("fileList", fileList);
@@ -166,7 +166,7 @@ export default function Home () {
       console.log("address", newFile.hash);
       const test2 = await fileAccess?.hasAccess(
         fileId,
-        ownerAddress,
+        address,
         address
       );
       if (test2) {
