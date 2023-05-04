@@ -43,14 +43,15 @@ import {
   BsRecordCircle,
 } from "react-icons/bs";
 import { MdCallEnd } from "react-icons/md";
+import { BigNumber } from "ethers";
 
-export default function Home() {
+export default function Home () {
   const { address } = useAccount();
   const videoRef = useRef(null);
   const provider = useProvider();
   const { data: signer } = useSigner();
   const { state, send } = useMeetingMachine();
-  const { startRecording, stopRecording, data, isStarting, inProgress, error } =
+  const { startRecording, stopRecording, data: recordingData, isStarting, inProgress, error } =
     useRecording();
   const [roomId, setRoomId] = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -86,6 +87,19 @@ export default function Home() {
       setAccessToken(token.accessToken);
     },
   });
+
+  useEffect(() => {
+    if (recordingData) {
+      console.log("recordingData", recordingData);
+      fetch('/api/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          file: recordingData.s3URL,
+          hostWallet: address,
+        }),
+      });
+    }
+  }, [recordingData]);
 
   const sbt = useContract({
     address: SBT_CONTRACT_ADDRESS,
@@ -138,29 +152,25 @@ export default function Home() {
     [fetchAudioStream.isCallable]
   );
 
-  const uploadFile = async () => {
-    const response = await fetch("/api/upload");
-    const {
-      response: { data },
-    } = await response.json();
-    setCid(data.Hash);
-  };
-
-  const decryptFile = async (fileId, cid) => {
+  const decryptFile = async () => {
+    const ownerAddress = '0x7904521174Bb111e4Fb416590F85116cddC2EA4E'
     if (address) {
+      const fileList = await fileAccess?.getAllFilesByOwnerAddress(
+        ownerAddress
+      );
+      const newFile = fileList.at(-1);
+      console.log("fileList", fileList);
+      console.log("latest File", newFile);
+      const fileId = newFile.id.toNumber()
+      console.log("fileId", fileId);
+      console.log("address", newFile.hash);
       const test2 = await fileAccess?.hasAccess(
         fileId,
-        "0x7935468Da117590bA75d8EfD180cC5594aeC1582",
+        ownerAddress,
         address
       );
-      const fileList = await fileAccess?.getAllFilesByOwnerAddress(
-        "0x7935468Da117590bA75d8EfD180cC5594aeC1582"
-      );
-      console.log("fileList", fileList);
       if (test2) {
-        const response = await axios.get(`/api/decrypt?cid=${cid}`);
-        // console.log("response", response.data);
-        setCid(cid);
+        setCid(fileList[0].hash);
       } else {
         alert("You don't have access to this file");
       }
@@ -280,18 +290,15 @@ export default function Home() {
         </div>
 
         <div
-          className={`flex gap-4 flex-wrap ${
-            isDisabled ? "opacity-50" : "opacity-100"
-          }`}
+          className={`flex gap-4 flex-wrap ${isDisabled ? "opacity-50" : "opacity-100"
+            }`}
         >
           <button
-            className={` text-lg text-white p-5 rounded-full ${
-              isMuted ? "bg-red-500" : "bg-gray-600"
-            } ${
-              isDisabled
+            className={` text-lg text-white p-5 rounded-full ${isMuted ? "bg-red-500" : "bg-gray-600"
+              } ${isDisabled
                 ? "cursor-not-allowed"
                 : "cursor-pointer hover:scale-105"
-            } `}
+              } `}
             onClick={() => {
               if (isMuted) {
                 produceAudio(micStream);
@@ -306,13 +313,11 @@ export default function Home() {
           </button>
 
           <button
-            className={` text-lg text-white p-5 rounded-full ${
-              isVideoEnabled ? "bg-gray-600 " : "bg-red-500"
-            } ${
-              isDisabled
+            className={` text-lg text-white p-5 rounded-full ${isVideoEnabled ? "bg-gray-600 " : "bg-red-500"
+              } ${isDisabled
                 ? "cursor-not-allowed"
                 : "cursor-pointer hover:scale-105"
-            }`}
+              }`}
             onClick={() => {
               if (isVideoEnabled) {
                 stopProducingVideo();
@@ -327,14 +332,12 @@ export default function Home() {
           </button>
 
           <button
-            className={` text-lg text-white p-5 rounded-full ${
-              iseRecording ? "bg-gray-600 " : "bg-red-500"
-            } ${
-              isDisabled
+            className={` text-lg text-white p-5 rounded-full ${iseRecording ? "bg-gray-600 " : "bg-red-500"
+              } ${isDisabled
                 ? "cursor-not-allowed"
                 : "cursor-pointer hover:scale-105"
-            }`}
-            onClick={() => {
+              }`}
+            onClick={async () => {
               if (iseRecording) {
                 stopRecording();
                 setIsRecording(false);
@@ -358,26 +361,23 @@ export default function Home() {
             <div>isStarting: {isStarting.toString()}</div>
             <div>inProgress: {inProgress.toString()}</div>
             <div>error: {error}</div>
-            <div>data: {JSON.stringify(data)}</div>
+            {/* <div>data: {JSON.stringify(data)}</div> */}
           </div>
         </div>
 
         <div className=" flex items-center gap-4">
           <Button
             onClick={() => {
-              decryptFile(0, "QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj");
+              decryptFile();
             }}
           >
             Decrypt
           </Button>
-          <Button onClick={uploadFile}>Upload File</Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2">
         <div>
-          {/* QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj */}
-          {/* <Video src='/api/decrypt?cid=QmXj3ELhSRcRUfXzvdcbuRPJPykyzEpkFVHeVkLsY7KEpj' width={300} height={300} controls /> */}
           {cid && (
             <Video
               src={`/api/decrypt?cid=${cid}`}
@@ -386,7 +386,6 @@ export default function Home() {
               controls
             />
           )}
-          {/* {cid && <Image src={`/api/decrypt?cid=${cid}`} width={300} height={300} />} */}
           <div className=" hidden">
             <h2 className="text-2xl">Room State</h2>
             <h3>{JSON.stringify(state.value)}</h3>
@@ -417,7 +416,7 @@ export default function Home() {
   );
 }
 
-export async function createRoom() {
+export async function createRoom () {
   // Fetch data from external API
   const {
     data: { data },
@@ -426,9 +425,9 @@ export async function createRoom() {
     {
       title: "Huddle01-SDK-Test",
       hostWallets: ["0x7935468Da117590bA75d8EfD180cC5594aeC1582"],
-      // tokenType: "ERC721",
-      // chain: "ETHEREUM",
-      // contractAddress: ["0xB000a4933107033A4E5483a1576EDA178F769508"],
+      tokenType: "ERC721",
+      chain: "FILECOIN",
+      contractAddress: [SBT_CONTRACT_ADDRESS],
     },
     {
       headers: {
